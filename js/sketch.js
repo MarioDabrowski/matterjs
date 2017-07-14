@@ -15,6 +15,7 @@ var shapes = [];
 var boundaries = [];
 var mouse;
 var mConstraint;
+var balloon;
 
 
 
@@ -34,22 +35,27 @@ function setup() {
   boundaries.push(new Boundary(0, height/2, 20, height, {isStatic: true}));
   boundaries.push(new Boundary(width - 10, height/2, 20, height, {isStatic: true}));
 
-  for(var i = 0; i < 5; i++) {
-    if(i === 0) {
-      shapes.push(new Circle(width/2 - 15, 300, 50, {friction: 0, restitution: 1}));
-    } else {
-      shapes.push(new Circle(width/2 - 15, 300 + (i * 70), 2, {friction: 0, restitution: 1}));
+  balloon = new Circle(400, 300, 50, {friction: 1, restitution: 0.8});
+  World.add(world, balloon);
 
+  var prevItem;
+  for(var i = 220; i <= 800; i += 20) {
+    var shape = new Circle(i, 100, 8, {friction: 0.5, restitution: 0.8});
+    shapes.push(shape);
+
+    if(prevItem) {
       var constraint = Constraint.create({
-        bodyA: shapes[i].body,
-        bodyB: shapes[i-1].body,
-        length: 70,
-        stifness: 0.1,
+        bodyA: shape.body,
+        bodyB: prevItem.body,
+        length: 14,
+        stifness: 1,
         dampint: 0.1
       });
 
       World.add(world, constraint);
     }
+
+    prevItem = shape;
   }
 
   mouse = Matter.Mouse.create(canvas.elt);
@@ -72,7 +78,7 @@ function setup() {
 function draw() {
   clear();
 
-  shapes[0].body.force = {x: 0, y: -0.04};
+  // shapes[0].body.force = {x: 0, y: -0.04};
 
   for(var i = 0; i < shapes.length; i++) {
     shapes[i].render();
@@ -88,9 +94,14 @@ function draw() {
     boundaries[i].render();
   }
 
-  for(var i = 0; i < 5; i++) {
-    if(i !== 0) {
-      line(shapes[i].body.position.x, shapes[i].body.position.y, shapes[i - 1].body.position.x, shapes[i - 1].body.position.y);
+  var prevShape;
+  for(var i = 0; i < shapes.length; i++) {
+    if(prevShape) {
+      line(shapes[i].body.position.x, shapes[i].body.position.y, prevShape.body.position.x, prevShape.body.position.y);
     }
+
+    prevShape = shapes[i];
   }
+
+  balloon.render();
 }
