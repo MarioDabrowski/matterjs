@@ -7,18 +7,16 @@ var Engine = Matter.Engine,
     Composite = Matter.Composite,
     Composites = Matter.Composites,
     MouseConstraint = Matter.MouseConstraint,
+    Mouse = Matter.Mouse,
     Events = Matter.Events;
 
 var engine = Engine.create();
+    engine.constraintIterations = 2.5;
 var world = engine.world;
 
 var boundaries = [];
-var anchor;
-var marshmallows = [];
-var elastic;
-var ropeA;
-var cracker;
-var chain = [];
+var chain;
+var chainArray = [];
 
 
 
@@ -28,90 +26,58 @@ var chain = [];
 
 function setup() {
   var canvas = createCanvas(windowWidth, windowHeight);
+  console.log(canvas);
+
+
+
+  // Draw items out from the center instead of the top left
   rectMode(CENTER);
 
-  boundaries.push(new Box(width/2, 5, width, 10, {isStatic: true}));
-  boundaries.push(new Box(0, height/2, 15, height, {isStatic: true}));
-  boundaries.push(new Box(width - 5, height/2, 10, height, {isStatic: true}));
-  boundaries.push(new Box(width/2, height - 5, width, 10, {isStatic: true}));
 
-  var marshmallowOptions = {
-    friction: 0.4,
-    restitution: 1
-  };
 
-  marshmallows.push(new Circle(400, height/2, random(20, 40), marshmallowOptions));
+  // Create the floor
+  boundaries.push(new Box(width/2, height - height/10, 300, 10, {isStatic: true}));
 
-  // Marshmallow launcher
-  anchor = {x: 400, y: height/2};
-  elastic = Constraint.create({
-    pointA: anchor,
-    bodyB: marshmallows[marshmallows.length - 1].body,
-    stiffness: 0.2
+
+
+  // Marshmallow chain
+  var group = Body.nextGroup(true);
+
+  chain = Composites.stack(width/2, 50, 8, 1, 10, 10, function(x, y) {
+    return Bodies.rectangle(x, y, 25, 5, { collisionFilter: { group: group } });
   });
 
-  World.add(world, [elastic]);
+  marshmallow = new Box(width/2, 400, 100, 80, {density: 0.000001, collisionFilter: { group: group }});
+  Composite.add(chain, marshmallow.body);
+
+  Composites.chain(chain, 0.5, 0, -0.5, 0, { stiffness: 0.2, length: 2, render: { type: 'line' } });
+
+  Composite.add(chain, Constraint.create({
+    bodyB: chain.bodies[0],
+    pointB: { x: -12, y: 0 },
+    pointA: { x: chain.bodies[0].position.x, y: chain.bodies[0].position.y },
+    stiffness: 0.5
+  }));
+
+  World.add(world, chain);
+
+
 
   // Mouse events
-  var mouse = Matter.Mouse.create(canvas.elt);
+  var mouse = Mouse.create(canvas.elt);
       mouse.pixelRatio = pixelDensity();
+
   var mouseConstraint = MouseConstraint.create(engine, {
     mouse: mouse,
     constraint: {
-      stiffness: 0.1,
-      render: {
-        visible: false
-      }
+      stiffness: 0.2
     }
   });
 
   World.add(world, mouseConstraint);
 
-  // After launch
-  Events.on(engine, 'afterUpdate', function() {
-    if (mouseConstraint.mouse.button === -1 && (marshmallows[marshmallows.length - 1].body.position.x > 400 + 20 || marshmallows[marshmallows.length - 1].body.position.y < height/2 - 20)) {
-      console.log('release');
-      marshmallows.push(new Circle(400, height/2, random(20, 40), marshmallowOptions));
-      elastic.bodyB = marshmallows[marshmallows.length - 1].body;
-    }
-  });
 
-  var group = Body.nextGroup(true);
-
-  ropeA = Composites.stack(width - 500, 10, 5, 1, 0, 0, function(x, y) {
-    var rope = new Rope(x, y, 20, 0.5, { collisionFilter: { group: group } });
-        rope.height = 20;
-    chain.push(rope);
-    return rope.body;
-  });
-
-  Composites.chain(ropeA, 0.5, 0, -0.5, 0, { stiffness: 0.4, length: 1, render: { type: 'line' } });
-  Composite.add(ropeA, Constraint.create({
-    bodyB: ropeA.bodies[0],
-    pointB: { x: -25, y: 0 },
-    pointA: { x: ropeA.bodies[0].position.x, y: ropeA.bodies[0].position.y },
-    stiffness: 0.5
-  }));
-
-  cracker = new Box(ropeA.bodies[ropeA.bodies.length - 1].position.x, ropeA.bodies[ropeA.bodies.length - 1].position.y + 100, 20, 100);
-
-  console.log();
-
-  var connectB = Constraint.create({
-    bodyA: cracker.body,
-    // pointA: { x: 0, y: -40 },
-    bodyB: ropeA.bodies[ropeA.bodies.length - 1],
-    stiffness: 0.8
-  });
-
-  World.add(world, [
-    ropeA,
-    connectB,
-    Bodies.rectangle(400, 600, 1200, 50.5, { isStatic: true })
-   ]);
-
-  console.log(ropeA);
-
+  // ---------------
   Engine.run(engine);
 }
 
@@ -124,20 +90,21 @@ function setup() {
 function draw() {
   clear();
 
-  for (var i = 0; i < boundaries.length; i++) {
-    boundaries[i].render();
+  var bodies = Composite.allBodies(engine.world);
+
+  drawingContext.clearRect(0, 0, canvas.width, canvas.height);
+  drawingContext.beginPath();
+
+  for (var i = 0; i < bodies.length; i += 1) {
+    var vertices = bodies[i].vertices;
+    drawingContext.moveTo(vertices[0].x, vertices[0].y);
+    for (var j = 1; j < vertices.length; j += 1) {
+      drawingContext.lineTo(vertices[j].x, vertices[j].y);
+    }
+    drawingContext.lineTo(vertices[0].x, vertices[0].y);
   }
 
-  ellipse(400, height/2, 20);
-  line(400, height/2, marshmallows[marshmallows.length - 1].body.position.x, marshmallows[marshmallows.length - 1].body.position.y);
-
-  for (var i = 0; i < marshmallows.length; i++) {
-    marshmallows[i].render();
-  }
-
-  for (var i = 0; i < chain.length; i++) {
-    chain[i].render();
-  }
-
-  cracker.render();
+  drawingContext.lineWidth = 1;
+  drawingContext.strokeStyle = '#808080';
+  drawingContext.stroke();
 }
