@@ -340,6 +340,7 @@ function draw() {
     pop();
   }
 
+  // Draw the outline of the marshmallow that will act as a mask for the sticky chocolate
   push();
   noStroke();
   fill('rgba(0,0,0, 0)');
@@ -348,6 +349,7 @@ function draw() {
   rect(0, 0, marshmallow.w, marshmallow.h);
   pop();
 
+  // Impose a screenshot of the chocolate onto the marshmallow
   push();
   translate(marshmallow.body.position.x, marshmallow.body.position.y);
   rotate(marshmallow.body.angle - 1.5708);
@@ -362,9 +364,17 @@ function draw() {
   );
   pop();
 
+  // Cover the reference image in the top left hand corner that is used to grab the screen shot
   push();
   noStroke();
   fill('rgba(255,255,255, 1)');
   rect(0 + marshmallow.h/2, 0 + marshmallow.w/2, marshmallow.h, marshmallow.w);
+  pop();
+
+  //
+  push();
+  drawingContext.globalAlpha = 0.5;
+  fill('brown');
+  rect(cup.body.position.x, cup.body.position.y, cup.w, cup.h);
   pop();
 }
