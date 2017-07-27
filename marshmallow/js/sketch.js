@@ -1,4 +1,4 @@
-// module aliases
+// Module aliases
 var Engine = Matter.Engine,
     World = Matter.World,
     Bodies = Matter.Bodies,
@@ -14,27 +14,100 @@ var engine = Engine.create();
     engine.constraintIterations = 2.5;
 var world = engine.world;
 
-var boundaries = [];
-var chain;
-var chainArray = [];
+var floor;
 var cup;
 var cupLeft;
 var cupRight;
-var dip;
-var outlineColor = '#9e9e9e';
-var lastPos;
 var topOfCup;
-var lowestPoint;
-var highestPoint;
-var narrowestPoint;
-var widestPoint;
+
+var chain;
+var chainArray = [];
+
+
+
+// ---------------------------
+// Check marshmallow direction
+// ---------------------------
+
+var lastPos;
+var travelingUp = false;
 
 function checkDirection(object) {
   if(object.position.y > lastPos) {
-    // console.log('update height');
+    travelingUp = true;
+  } else {
+    travelingUp = false;
   }
 
   lastPos = object.position.y;
+}
+
+
+
+// ------------
+// Draw the dip
+// ------------
+
+var dip = false;
+
+function dipStatus(event, time) {
+  if(event.pairs[0].bodyA === marshmallow.body && event.pairs[0].bodyB === cup.body) {
+    if(time === 'start') {
+      dip = true;
+    } else {
+      dip = false;
+    }
+  }
+}
+
+
+
+// ------------
+// Draw the dip
+// ------------
+
+var intersections;
+var shape = function() {};
+
+function drawDip() {
+  if(intersections.length > 1 && marshmallow.body.vertices[0].y < topOfCup && marshmallow.body.vertices[3].y < topOfCup) {
+    if(
+      // Left and right bounds are active
+      intersections[0].side === 'right' && intersections[1].side === 'left'
+    ) {
+        shape = function() {
+          push();
+          fill('red');
+          quad(
+            intersections[0].x,
+            intersections[0].y,
+            marshmallow.body.vertices[1].x,
+            marshmallow.body.vertices[1].y,
+            marshmallow.body.vertices[2].x,
+            marshmallow.body.vertices[2].y,
+            intersections[1].x,
+            intersections[1].y
+          );
+          pop();
+        }
+      }
+  } else {
+    shape = function() {
+      push();
+      fill('red');
+      quad(
+        marshmallow.body.vertices[0].x,
+        marshmallow.body.vertices[0].y,
+        marshmallow.body.vertices[1].x,
+        marshmallow.body.vertices[1].y,
+        marshmallow.body.vertices[2].x,
+        marshmallow.body.vertices[2].y,
+        marshmallow.body.vertices[3].x,
+        marshmallow.body.vertices[3].y,
+      );
+      pop();
+    };
+  }
 }
 
 
@@ -43,7 +116,6 @@ function checkDirection(object) {
 // Intersections
 // -------------
 
-// Helper function
 var linesIntersection = function(x1, y1, x2, y2, x3, y3, x4, y4) {
   var denom = (y4-y3)*(x2-x1) - (x4-x3)*(y2-y1);
   var nom_a = ((x4-x3)*(y1-y3) - (y4-y3)*(x1-x3));
@@ -70,7 +142,9 @@ var linesIntersection = function(x1, y1, x2, y2, x3, y3, x4, y4) {
 
 // Check all marshmallow sides for intersection
 function marshmallowIntersection() {
-  var intersections = [];
+  var intersectionMap = ['right', 'bottom', 'left', 'top'];
+
+  intersections = [];
 
   for(var i = 0; i < marshmallow.body.vertices.length; i++) {
     var side = marshmallow.body.vertices[i];
@@ -88,10 +162,10 @@ function marshmallowIntersection() {
     );
 
     if(intersection.within_seg1 && intersection.within_seg2) {
+      intersection.side = intersectionMap[i];
+      intersections.push(intersection);
       ellipse(intersection.x, intersection.y, 5);
     }
-
-    intersections.push(intersection);
   }
 }
 
@@ -103,29 +177,38 @@ function marshmallowIntersection() {
 
 function setup() {
   var canvas = createCanvas(windowWidth, windowHeight);
-
-
-
-  // Draw items out from the center instead of the top left
   rectMode(CENTER);
 
 
 
-  // Create the floor
-  boundaries.push(new Box(width/2, height - 5, 300, 10, {isStatic: true}));
+  // ----------
+  // Boundaries
+  // ----------
+
+  floor = new Box(width/2, height - 5, 300, 10, {isStatic: true});
+  cup = new Box(width/2, height - 70, 200, 120, {isStatic: true, isSensor: true});
+  cupLeft = new Box(width/2 - 108, height - 70, 30, 120, {isStatic: true});
+  cupRight = new Box(width/2 + 108, height - 70, 30, 120, {isStatic: true});
+
+  topOfCup = cup.body.position.y - cup.h / 2;
+
+  World.add(world, cup.body);
 
 
 
+  // -----------------
   // Marshmallow chain
+  // -----------------
+
   var group = Body.nextGroup(true);
 
+  // Create the chain link bodies
   chain = Composites.stack(width/2, 50, 5, 1, 10, 10, function(x, y) {
     return Bodies.rectangle(x, y, 25, 5, { collisionFilter: { group: group } });
   });
 
+  // Add the marshmallow to the end of the chain
   marshmallow = new Box(width/2, 400, 100, 80, {density: 0.0001, collisionFilter: { group: group }});
-  console.log(marshmallow.body);
-
   Composite.add(chain, marshmallow.body);
 
   Composites.chain(chain, 0.5, 0, -0.5, 0, { stiffness: 0.1, length: 5, render: { type: 'line' } });
@@ -140,15 +223,11 @@ function setup() {
   World.add(world, chain);
 
 
-  cup = new Box(width/2, height - 70, 200, 120, {isStatic: true, isSensor: true});
-  cupLeft = new Box(width/2 - 108, height - 70, 30, 120, {isStatic: true});
-  cupRight = new Box(width/2 + 108, height - 70, 30, 120, {isStatic: true});
 
-  topOfCup = cup.body.position.y - cup.h / 2;
-
-  World.add(world, cup.body);
-
+  // ------------
   // Mouse events
+  // ------------
+
   var mouse = Mouse.create(canvas.elt);
       mouse.pixelRatio = pixelDensity();
 
@@ -162,63 +241,28 @@ function setup() {
   World.add(world, mouseConstraint);
 
 
+
+  // -------------
   // Cup collision
+  // -------------
 
   Events.on(engine, 'collisionStart', function(event) {
-    if(event.pairs[0].bodyA === marshmallow.body && event.pairs[0].bodyB === cup.body) {
-      dip = true;
-    }
+    dipStatus(event, 'start');
   });
 
   Events.on(engine, 'collisionEnd', function(event) {
-    if(event.pairs[0].bodyA === marshmallow.body && event.pairs[0].bodyB === cup.body) {
-      dip = false;
-    }
+    dipStatus(event, 'end');
+    shape = function() {};
   });
 
   Events.on(engine, 'collisionActive', function(event) {
-    if(event.pairs[0].bodyA === marshmallow.body && event.pairs[0].bodyB === cup.body) {
-
-
-      checkDirection(marshmallow.body);
-
-      lowestPoint = marshmallow.body.vertices.reduce(function(sum, point) {
-        if(point.y > sum) {
-          return point.y;
-        }
-
-        return sum;
-      }, 0);
-
-      highestPoint = marshmallow.body.vertices.reduce(function(sum, point) {
-        if(point.y < sum) {
-          return point.y;
-        }
-
-        return sum;
-      }, 10000);
-
-      narrowestPoint = marshmallow.body.vertices.reduce(function(sum, point) {
-        if(point.x > sum) {
-          return point.x;
-        }
-
-        return sum;
-      }, 0);
-
-      widestPoint = marshmallow.body.vertices.reduce(function(sum, point) {
-        if(point.x < sum) {
-          return point.x;
-        }
-
-        return sum;
-      }, 10000);
-    }
+    marshmallowIntersection();
+    checkDirection(marshmallow.body);
+    drawDip();
   });
 
 
 
-  // ---------------
   Engine.run(engine);
 }
 
@@ -231,11 +275,10 @@ function setup() {
 function draw() {
   clear();
 
+  // Draw lines around all of the bodies in the engine
   var bodies = Composite.allBodies(engine.world);
 
-  drawingContext.clearRect(0, 0, canvas.width, canvas.height);
   drawingContext.beginPath();
-
   for (var i = 0; i < bodies.length; i += 1) {
     var vertices = bodies[i].vertices;
     drawingContext.moveTo(vertices[0].x, vertices[0].y);
@@ -246,22 +289,8 @@ function draw() {
   }
 
   drawingContext.lineWidth = 1;
-  drawingContext.strokeStyle = outlineColor;
+  drawingContext.strokeStyle = '#9e9e9e';
   drawingContext.stroke();
 
-  if(dip) {
-    drawingContext.save();
-    translate(marshmallow.body.position.x, marshmallow.body.position.y);
-    rotate(marshmallow.body.angle);
-    rect(0, 0, marshmallow.w, marshmallow.h);
-    drawingContext.restore();
-    drawingContext.save();
-    drawingContext.clip();
-    fill('red');
-    var fillHeight = ((highestPoint - lowestPoint) * -1) - (((highestPoint - lowestPoint) + (lowestPoint - topOfCup)) * -1);
-    rect(marshmallow.body.position.x, lowestPoint - fillHeight/2, widestPoint - narrowestPoint, fillHeight);
-    drawingContext.restore();
-  }
-
-  marshmallowIntersection();
+  shape();
 }
