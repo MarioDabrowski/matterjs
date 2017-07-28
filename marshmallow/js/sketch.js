@@ -1,3 +1,9 @@
+// KNOWN BUGS
+// 1. Hitting the marshmallow against the side of the cup triggers a cup + marshmallow collision even though they are not touching, incrementing
+//    colorLayer, causing the colors to get darker without actually dipping.
+// 2. If the marshmallow enters the cup upside down the colors don't get applied.
+// 3.
+
 // Module aliases
 var Engine = Matter.Engine,
     World = Matter.World,
@@ -23,7 +29,21 @@ var topOfCup;
 var chain;
 var chainArray = [];
 
+var colorLayer = 0;
+var colorLayers = ['#e8d2d2', '#d1a5a5', '#bb7878', '#a44b4b', '#8d1e1e'];
 
+
+var btnClear = document.querySelector('.btn-clear');
+
+btnClear.addEventListener('click', function() {
+  shapes = [];
+  colorLayer = 0;
+});
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+
+}
 
 // ---------------------------
 // Check marshmallow direction
@@ -82,6 +102,7 @@ function dipFunc(shapeArray) {
   }
 
   shape = {
+    colorLayer: colorLayer,
     points: shapeArray,
     angle: shapeAngle,
     angleOffset: (angleDirection === 'pos') ? shapeAngle * -1 : shapeAngle,
@@ -102,6 +123,7 @@ function dipFunc(shapeArray) {
 }
 
 function drawDip() {
+
   if(intersections.length > 1) {
 
     // Tilted to the left
@@ -263,9 +285,9 @@ function setup() {
   // ----------
 
   floor = new Box(width/2, height - 5, 300, 10, {isStatic: true});
-  cup = new Box(width/2, height - 70, 200, 120, {isStatic: true, isSensor: true});
-  cupLeft = new Box(width/2 - 108, height - 70, 30, 120, {isStatic: true});
-  cupRight = new Box(width/2 + 108, height - 70, 30, 120, {isStatic: true});
+  cup = new Box(width/2, height - 70, 200, 120, {isStatic: true, isSensor: true, label: 'cup'});
+  cupLeft = new Box(width/2 - 114, height - 70, 30, 120, {isStatic: true, label: 'cupLeft'});
+  cupRight = new Box(width/2 + 114, height - 70, 30, 120, {isStatic: true, label: 'cupRight'});
 
   topOfCup = cup.body.position.y - cup.h / 2;
 
@@ -285,7 +307,7 @@ function setup() {
   });
 
   // Add the marshmallow to the end of the chain
-  marshmallow = new Box(width/2, 400, 100, 80, {density: 0.0001, collisionFilter: { group: group }});
+  marshmallow = new Box(width/2, 400, 100, 80, {density: 0.0001, collisionFilter: { group: group }, label: 'marshmallow'});
   Composite.add(chain, marshmallow.body);
 
   Composites.chain(chain, 0.5, 0, -0.5, 0, { stiffness: 0.1, length: 5, render: { type: 'line' } });
@@ -326,26 +348,36 @@ function setup() {
   var interval;
 
   Events.on(engine, 'collisionStart', function(event) {
-    dipStatus(event, 'start');
+    if(event.pairs[0].bodyA.label === 'cup' && event.pairs[0].bodyB.label === 'marshmallow') {
+      dipStatus(event, 'start');
+    }
   });
 
   Events.on(engine, 'collisionEnd', function(event) {
-    dipStatus(event, 'end');
+    if(event.pairs[0].bodyA.label === 'cup' && event.pairs[0].bodyB.label === 'marshmallow') {
+      dipStatus(event, 'end');
 
-    if(interval) {
-      clearInterval(interval);
-      interval = null;
+      if(interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+
+      if(colorLayer < colorLayers.length - 1) {
+        colorLayer += 1;
+      }
     }
   });
 
   Events.on(engine, 'collisionActive', function(event) {
-    marshmallowIntersection();
-    checkDirection(marshmallow.body);
+    if(event.pairs[0].bodyA.label === 'cup' && event.pairs[0].bodyB.label === 'marshmallow') {
+      marshmallowIntersection();
+      checkDirection(marshmallow.body);
 
-    if(!interval) {
-      interval = setInterval(function() {
-        drawDip();
-      }, 100);
+      if(!interval) {
+        interval = setInterval(function() {
+          drawDip();
+        }, 100);
+      }
     }
   });
 
@@ -388,8 +420,9 @@ function draw() {
     push();
     translate(marshmallow.h/2, 0);
     rotate(shapes[i].angleOffset);
+    drawingContext.clip();
     noStroke();
-    fill('brown');
+    fill(colorLayers[shapes[i].colorLayer]);
     quad(
       shapes[i].points[0] - shapes[i].offset.x,
       shapes[i].points[1] - shapes[i].offset.y,
@@ -417,18 +450,18 @@ function draw() {
   translate(marshmallow.body.position.x, marshmallow.body.position.y);
   rotate(marshmallow.body.angle - 1.5708);
   drawingContext.clip();
-  drawingContext.globalAlpha = 0.5;
   if(pixelDensity() === 2) {
     scale(0.5);
     translate(marshmallow.h * -1, marshmallow.w * -1);
   } else {
     translate(marshmallow.h/2 * -1, marshmallow.w/2 * -1);
   }
-  drawingContext.drawImage(
-    canvas,
-    0,
-    0
-  );
+  drawingContext.drawImage(canvas, 0, 0);
+  pop();
+  push();
+  noStroke();
+  fill('rgba(0,0,0, 0.1)');
+  rect(marshmallow.h/2, marshmallow.w/2, marshmallow.h, marshmallow.w);
   pop();
 
   // Cover the reference image in the top left hand corner that is used to grab the screen shot
