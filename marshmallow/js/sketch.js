@@ -417,9 +417,13 @@ function draw() {
   translate(marshmallow.body.position.x, marshmallow.body.position.y);
   rotate(marshmallow.body.angle - 1.5708);
   drawingContext.clip();
-  scale(0.5);
   drawingContext.globalAlpha = 0.5;
-  translate(marshmallow.h * -1, marshmallow.w * -1);
+  if(pixelDensity() === 2) {
+    scale(0.5);
+    translate(marshmallow.h * -1, marshmallow.w * -1);
+  } else {
+    translate(marshmallow.h/2 * -1, marshmallow.w/2 * -1);
+  }
   drawingContext.drawImage(
     canvas,
     0,
