@@ -69,57 +69,121 @@ function dipStatus(event, time) {
 var intersections;
 var shapes = [];
 
+function dipFunc(shapeArray) {
+  var shapeAngle;
+  var angleDirection;
+
+  if(marshmallow.body.angle > 1.570796369472525) {
+    shapeAngle = marshmallow.body.angle - 1.570796369472525;
+    angleDirection = 'pos';
+  } else {
+    shapeAngle = 1.570796369472525 - marshmallow.body.angle;
+    angleDirection = 'neg';
+  }
+
+  shape = {
+    points: shapeArray,
+    angle: shapeAngle,
+    angleOffset: (angleDirection === 'pos') ? shapeAngle * -1 : shapeAngle,
+    midpoint: [
+      (marshmallow.body.vertices[3].x + marshmallow.body.vertices[0].x) /2,
+      (marshmallow.body.vertices[3].y + marshmallow.body.vertices[0].y) /2
+    ],
+    offset: {
+      x: 0,
+      y: 0
+    }
+  };
+
+  shape.offset.x = shape.midpoint[0];
+  shape.offset.y = shape.midpoint[1];
+
+  shapes.push(shape);
+}
+
 function drawDip() {
-  if(intersections.length > 1 && marshmallow.body.vertices[0].y < topOfCup && marshmallow.body.vertices[3].y < topOfCup) {
+  if(intersections.length > 1) {
+
+    // Tilted to the left
+    if(intersections[0].side === 'bottom' && intersections[1].side === 'top' && marshmallow.body.angle < 2) {
+      dipFunc([
+        intersections[0].x,
+        intersections[0].y,
+        marshmallow.body.vertices[2].x,
+        marshmallow.body.vertices[2].y,
+        marshmallow.body.vertices[3].x,
+        marshmallow.body.vertices[3].y,
+        intersections[1].x,
+        intersections[1].y
+      ]);
+    }
+
+    // Tilted to the right
+    if(intersections[0].side === 'bottom' && intersections[1].side === 'top' && marshmallow.body.angle > 2) {
+      dipFunc([
+        intersections[0].x,
+        intersections[0].y,
+        marshmallow.body.vertices[1].x,
+        marshmallow.body.vertices[1].y,
+        marshmallow.body.vertices[0].x,
+        marshmallow.body.vertices[0].y,
+        intersections[1].x,
+        intersections[1].y
+      ]);
+    }
+
     if(intersections[0].side === 'right' && intersections[1].side === 'left') {
-      var shapeAngle;
-      var angleDirection;
+      dipFunc([
+        intersections[0].x,
+        intersections[0].y,
+        marshmallow.body.vertices[1].x,
+        marshmallow.body.vertices[1].y,
+        marshmallow.body.vertices[2].x,
+        marshmallow.body.vertices[2].y,
+        intersections[1].x,
+        intersections[1].y
+      ]);
+    }
 
-      if(marshmallow.body.angle > 1.570796369472525) {
-        shapeAngle = marshmallow.body.angle - 1.570796369472525;
-        angleDirection = 'pos';
-      } else {
-        shapeAngle = 1.570796369472525 - marshmallow.body.angle;
-        angleDirection = 'neg';
-      }
+    if(intersections[0].side === 'bottom' && intersections[1].side === 'left') {
+      dipFunc([
+        intersections[0].x,
+        intersections[0].y,
+        marshmallow.body.vertices[2].x,
+        marshmallow.body.vertices[2].y,
+        intersections[1].x,
+        intersections[1].y
+      ]);
+    }
 
-      shape = {
-        points: [
-          intersections[0].x,
-          intersections[0].y,
-          marshmallow.body.vertices[1].x,
-          marshmallow.body.vertices[1].y,
-          marshmallow.body.vertices[2].x,
-          marshmallow.body.vertices[2].y,
-          intersections[1].x,
-          intersections[1].y
-        ],
-        rectangle: [
-          marshmallow.body.vertices[0].x,
-          marshmallow.body.vertices[0].y,
-          marshmallow.body.vertices[1].x,
-          marshmallow.body.vertices[1].y,
-          marshmallow.body.vertices[2].x,
-          marshmallow.body.vertices[2].y,
-          marshmallow.body.vertices[3].x,
-          marshmallow.body.vertices[3].y
-        ],
-        angle: shapeAngle,
-        angleOffset: (angleDirection === 'pos') ? shapeAngle * -1 : shapeAngle,
-        midpoint: [
-          (marshmallow.body.vertices[3].x + marshmallow.body.vertices[0].x) /2,
-          (marshmallow.body.vertices[3].y + marshmallow.body.vertices[0].y) /2
-        ],
-        offset: {
-          x: 0,
-          y: 0
-        }
-      };
-
-      shape.offset.x = shape.midpoint[0];
-      shape.offset.y = shape.midpoint[1];
-
-      shapes.push(shape);
+    if(intersections[0].side === 'right' && intersections[1].side === 'bottom') {
+      dipFunc([
+        intersections[0].x,
+        intersections[0].y,
+        marshmallow.body.vertices[1].x,
+        marshmallow.body.vertices[1].y,
+        intersections[1].x,
+        intersections[1].y
+      ]);
+    }
+  } else {
+    if(
+      marshmallow.body.vertices[0].y > topOfCup &&
+      marshmallow.body.vertices[0].x < cup.body.vertices[1].x &&
+      marshmallow.body.vertices[3].y > topOfCup &&
+      marshmallow.body.vertices[3].x > cup.body.vertices[0].x
+    ) {
+      shapes = [];
+      dipFunc([
+        marshmallow.body.vertices[0].x,
+        marshmallow.body.vertices[0].y,
+        marshmallow.body.vertices[1].x,
+        marshmallow.body.vertices[1].y,
+        marshmallow.body.vertices[2].x,
+        marshmallow.body.vertices[2].y,
+        marshmallow.body.vertices[3].x,
+        marshmallow.body.vertices[3].y
+      ]);
     }
   }
 }
@@ -178,7 +242,6 @@ function marshmallowIntersection() {
     if(intersection.within_seg1 && intersection.within_seg2) {
       intersection.side = intersectionMap[i];
       intersections.push(intersection);
-      ellipse(intersection.x, intersection.y, 5);
     }
   }
 }
@@ -201,8 +264,8 @@ function setup() {
 
   floor = new Box(width/2, height - 5, 300, 10, {isStatic: true});
   cup = new Box(width/2, height - 70, 200, 120, {isStatic: true, isSensor: true});
-  cupLeft = new Box(width/2 - 108, height - 70, 30, 120, {isStatic: true});
-  cupRight = new Box(width/2 + 108, height - 70, 30, 120, {isStatic: true});
+  cupLeft = new Box(width/2 - 108, height - 70, 10, 120, {isStatic: true});
+  cupRight = new Box(width/2 + 108, height - 70, 10, 120, {isStatic: true});
 
   topOfCup = cup.body.position.y - cup.h / 2;
 
