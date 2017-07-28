@@ -264,8 +264,8 @@ function setup() {
 
   floor = new Box(width/2, height - 5, 300, 10, {isStatic: true});
   cup = new Box(width/2, height - 70, 200, 120, {isStatic: true, isSensor: true});
-  cupLeft = new Box(width/2 - 108, height - 70, 10, 120, {isStatic: true});
-  cupRight = new Box(width/2 + 108, height - 70, 10, 120, {isStatic: true});
+  cupLeft = new Box(width/2 - 108, height - 70, 30, 120, {isStatic: true});
+  cupRight = new Box(width/2 + 108, height - 70, 30, 120, {isStatic: true});
 
   topOfCup = cup.body.position.y - cup.h / 2;
 
