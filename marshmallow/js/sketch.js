@@ -321,8 +321,6 @@ function setup() {
 
   World.add(world, chain);
 
-
-
   // ------------
   // Mouse events
   // ------------
@@ -476,5 +474,22 @@ function draw() {
   drawingContext.globalAlpha = 0.5;
   fill('brown');
   rect(cup.body.position.x, cup.body.position.y, cup.w, cup.h);
+  pop();
+
+
+  // Draw the chain
+  push();
+  stroke('black');
+  strokeWeight(2.5);
+  for (var i = 0; i < chain.bodies.length; i++) {
+    if(i < chain.bodies.length - 1) {
+      line(
+        chain.bodies[i].position.x,
+        chain.bodies[i].position.y,
+        chain.bodies[i + 1].position.x,
+        chain.bodies[i + 1].position.y
+      );
+    }
+  }
   pop();
 }
