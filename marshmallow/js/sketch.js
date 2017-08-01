@@ -99,8 +99,8 @@ function dipFunc(shapeArray) {
     }
   };
 
-  shape.offset.x = shape.midpoint[0];
-  shape.offset.y = shape.midpoint[1];
+  // shape.offset.x = shape.midpoint[0];
+  // shape.offset.y = shape.midpoint[1];
 
   shapes.push(shape);
 }
@@ -575,9 +575,9 @@ function draw() {
   // Draw all of the dipped shapes
   for(var i = 0; i < shapes.length; i++) {
     push();
-    translate(marshmallow.w/2, 0);
-    rotate(shapes[i].angleOffset);
-    drawingContext.clip();
+    // translate(marshmallow.w/2, 0);
+    // rotate(shapes[i].angleOffset);
+    // drawingContext.clip();
     // noStroke();
     stroke('black');
     strokeWeight(1);
