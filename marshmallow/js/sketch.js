@@ -58,25 +58,6 @@ function windowResized() {
 
 
 
-// ---------------------------
-// Check marshmallow direction
-// ---------------------------
-
-var lastPos;
-var travelingUp = false;
-
-function checkDirection(object) {
-  if(object.position.y > lastPos) {
-    travelingUp = true;
-  } else {
-    travelingUp = false;
-  }
-
-  lastPos = object.position.y;
-}
-
-
-
 // ----------------
 // Dip interactions
 // ----------------
@@ -96,25 +77,21 @@ function dipStatus(event, time) {
 }
 
 function dipFunc(shapeArray) {
-  var shapeAngle;
   var angleDirection;
 
-  if(marshmallow.body.angle > 1.570796369472525) {
-    shapeAngle = marshmallow.body.angle - 1.570796369472525;
+  if(marshmallow.body.angle > 0) {
     angleDirection = 'pos';
   } else {
-    shapeAngle = 1.570796369472525 - marshmallow.body.angle;
     angleDirection = 'neg';
   }
 
   shape = {
     colorLayer: colorLayer,
     points: shapeArray,
-    angle: shapeAngle,
-    angleOffset: (angleDirection === 'pos') ? shapeAngle * -1 : shapeAngle,
+    angleOffset: (angleDirection === 'pos') ? marshmallow.body.angle * -1 : marshmallow.body.angle,
     midpoint: [
-      (marshmallow.body.vertices[3].x + marshmallow.body.vertices[0].x) /2,
-      (marshmallow.body.vertices[3].y + marshmallow.body.vertices[0].y) /2
+      (marshmallow.body.vertices[0].x + marshmallow.body.vertices[1].x) /2,
+      ((marshmallow.body.vertices[0].y + marshmallow.body.vertices[1].y) + 12) /2
     ],
     offset: {
       x: 0,
@@ -133,7 +110,34 @@ function drawDip() {
   if(intersections.length > 1) {
 
     // Tilted to the left
-    if(intersections[0].side === 'bottom' && intersections[1].side === 'top' && marshmallow.body.angle < 2) {
+    // if(intersections[0].side === 'bottom' && intersections[1].side === 'top' && marshmallow.body.angle < 2) {
+    //   dipFunc([
+    //     intersections[0].x,
+    //     intersections[0].y,
+    //     marshmallow.body.vertices[2].x,
+    //     marshmallow.body.vertices[2].y,
+    //     marshmallow.body.vertices[3].x,
+    //     marshmallow.body.vertices[3].y,
+    //     intersections[1].x,
+    //     intersections[1].y
+    //   ]);
+    // }
+    //
+    // // Tilted to the right
+    // if(intersections[0].side === 'bottom' && intersections[1].side === 'top' && marshmallow.body.angle > 2) {
+    //   dipFunc([
+    //     intersections[0].x,
+    //     intersections[0].y,
+    //     marshmallow.body.vertices[1].x,
+    //     marshmallow.body.vertices[1].y,
+    //     marshmallow.body.vertices[0].x,
+    //     marshmallow.body.vertices[0].y,
+    //     intersections[1].x,
+    //     intersections[1].y
+    //   ]);
+    // }
+
+    if(intersections[0].side === 'right' && intersections[1].side === 'left') {
       dipFunc([
         intersections[0].x,
         intersections[0].y,
@@ -146,73 +150,46 @@ function drawDip() {
       ]);
     }
 
-    // Tilted to the right
-    if(intersections[0].side === 'bottom' && intersections[1].side === 'top' && marshmallow.body.angle > 2) {
-      dipFunc([
-        intersections[0].x,
-        intersections[0].y,
-        marshmallow.body.vertices[1].x,
-        marshmallow.body.vertices[1].y,
-        marshmallow.body.vertices[0].x,
-        marshmallow.body.vertices[0].y,
-        intersections[1].x,
-        intersections[1].y
-      ]);
-    }
-
-    if(intersections[0].side === 'right' && intersections[1].side === 'left') {
-      dipFunc([
-        intersections[0].x,
-        intersections[0].y,
-        marshmallow.body.vertices[1].x,
-        marshmallow.body.vertices[1].y,
-        marshmallow.body.vertices[2].x,
-        marshmallow.body.vertices[2].y,
-        intersections[1].x,
-        intersections[1].y
-      ]);
-    }
-
-    if(intersections[0].side === 'bottom' && intersections[1].side === 'left') {
-      dipFunc([
-        intersections[0].x,
-        intersections[0].y,
-        marshmallow.body.vertices[2].x,
-        marshmallow.body.vertices[2].y,
-        intersections[1].x,
-        intersections[1].y
-      ]);
-    }
-
-    if(intersections[0].side === 'right' && intersections[1].side === 'bottom') {
-      dipFunc([
-        intersections[0].x,
-        intersections[0].y,
-        marshmallow.body.vertices[1].x,
-        marshmallow.body.vertices[1].y,
-        intersections[1].x,
-        intersections[1].y
-      ]);
-    }
+    // if(intersections[0].side === 'bottom' && intersections[1].side === 'left') {
+    //   dipFunc([
+    //     intersections[0].x,
+    //     intersections[0].y,
+    //     marshmallow.body.vertices[2].x,
+    //     marshmallow.body.vertices[2].y,
+    //     intersections[1].x,
+    //     intersections[1].y
+    //   ]);
+    // }
+    //
+    // if(intersections[0].side === 'right' && intersections[1].side === 'bottom') {
+    //   dipFunc([
+    //     intersections[0].x,
+    //     intersections[0].y,
+    //     marshmallow.body.vertices[1].x,
+    //     marshmallow.body.vertices[1].y,
+    //     intersections[1].x,
+    //     intersections[1].y
+    //   ]);
+    // }
   } else {
-    if(
-      marshmallow.body.vertices[0].y > topOfCup &&
-      marshmallow.body.vertices[0].x < cup.body.vertices[1].x &&
-      marshmallow.body.vertices[3].y > topOfCup &&
-      marshmallow.body.vertices[3].x > cup.body.vertices[0].x
-    ) {
-      shapes = [];
-      dipFunc([
-        marshmallow.body.vertices[0].x,
-        marshmallow.body.vertices[0].y,
-        marshmallow.body.vertices[1].x,
-        marshmallow.body.vertices[1].y,
-        marshmallow.body.vertices[2].x,
-        marshmallow.body.vertices[2].y,
-        marshmallow.body.vertices[3].x,
-        marshmallow.body.vertices[3].y
-      ]);
-    }
+    // if(
+    //   marshmallow.body.vertices[0].y > topOfCup &&
+    //   marshmallow.body.vertices[0].x < cup.body.vertices[1].x &&
+    //   marshmallow.body.vertices[3].y > topOfCup &&
+    //   marshmallow.body.vertices[3].x > cup.body.vertices[0].x
+    // ) {
+    //   shapes = [];
+    //   dipFunc([
+    //     marshmallow.body.vertices[0].x,
+    //     marshmallow.body.vertices[0].y,
+    //     marshmallow.body.vertices[1].x,
+    //     marshmallow.body.vertices[1].y,
+    //     marshmallow.body.vertices[2].x,
+    //     marshmallow.body.vertices[2].y,
+    //     marshmallow.body.vertices[3].x,
+    //     marshmallow.body.vertices[3].y
+    //   ]);
+    // }
   }
 }
 
@@ -248,7 +225,7 @@ var linesIntersection = function(x1, y1, x2, y2, x3, y3, x4, y4) {
 
 // Check all marshmallow sides for intersection
 function marshmallowIntersection() {
-  var intersectionMap = ['right', 'bottom', 'left', 'top'];
+  var intersectionMap = ['top', 'right', 'bottom', 'left'];
 
   intersections = [];
 
@@ -279,9 +256,6 @@ function marshmallowIntersection() {
 // -----
 // Setup
 // -----
-
-var constraint1;
-var constraint2;
 
 function setup() {
   var canvas = createCanvas(windowWidth, windowHeight);
@@ -338,7 +312,6 @@ function setup() {
   marshmallow = new Box(width/2, 300, 80, 100, {
     density: 0.00001,
     label: 'marshmallow',
-    // chamfer: { radius: 8 },
     collisionFilter: {
       category: 0x0001,
       mask: 0x0002
@@ -346,6 +319,7 @@ function setup() {
   });
 
   marshmallowBody = loadImage('img/body.png');
+  marshmallowBodyMask = loadImage('img/bodyMask.png');
 
   (function createChain() {
     var chainLinks = 6;
@@ -425,7 +399,7 @@ function setup() {
   constraintArmLeft = Constraint.create({
     bodyA: marshmallow.body,
     bodyB: armLeft,
-    pointA: { x: -38.25, y: -20 },
+    pointA: { x: -39, y: -20 },
     length: 40,
     damping: 0.5,
     stiffness: 1,
@@ -435,7 +409,7 @@ function setup() {
   constraintArmRight = Constraint.create({
     bodyA: marshmallow.body,
     bodyB: armRight,
-    pointA: { x: 38.25, y: -20 },
+    pointA: { x: 39, y: -20 },
     length: 40,
     damping: 0.5,
     stiffness: 1,
@@ -504,6 +478,7 @@ function setup() {
   Events.on(engine, 'collisionStart', function(event) {
     if(event.pairs[0].bodyA.label === 'cup' && event.pairs[0].bodyB.label === 'marshmallow') {
       dipStatus(event, 'start');
+      console.log('dip started');
     }
   });
 
@@ -523,14 +498,15 @@ function setup() {
   });
 
   Events.on(engine, 'collisionActive', function(event) {
-    if(event.pairs[0].bodyA.label === 'cup' && event.pairs[0].bodyB.label === 'marshmallow') {
-      marshmallowIntersection();
-      checkDirection(marshmallow.body);
+    for(var i = 0; i < event.pairs.length; i++) {
+      if(event.pairs[i].bodyA.label === 'cup' && event.pairs[i].bodyB.label === 'marshmallow') {
+        marshmallowIntersection();
 
-      if(!interval) {
-        interval = setInterval(function() {
-          drawDip();
-        }, 100);
+        if(!interval) {
+          interval = setInterval(function() {
+            drawDip();
+          }, 500);
+        }
       }
     }
   });
@@ -573,24 +549,40 @@ function draw() {
 
 
 
+  // --------------------
+  // Draw the marshmallow
+  // --------------------
+
+  push();
+  translate(marshmallow.body.position.x, marshmallow.body.position.y);
+  rotate(marshmallow.body.angle);
+  image(marshmallowBody, marshmallow.w/2 * -1, marshmallow.h/2 * -1, marshmallow.w, marshmallow.h);
+  pop();
+
+
+
   // ---------------
   // Marshmallow dip
   // ---------------
 
+  // Marshmallow Reference
   push();
   noStroke();
-  fill('rgba(0,0,0, 0)');
-  rect(0 + marshmallow.h/2, 0 + marshmallow.w/2, marshmallow.h, marshmallow.w);
+  fill('rgba(0,0,0, 0.2)');
+  rect(0 + marshmallow.w/2, 0 + marshmallow.h/2, marshmallow.w, marshmallow.h);
   pop();
 
   // Draw all of the dipped shapes
   for(var i = 0; i < shapes.length; i++) {
     push();
-    translate(marshmallow.h/2, 0);
+    translate(marshmallow.w/2, 0);
     rotate(shapes[i].angleOffset);
     drawingContext.clip();
-    noStroke();
-    fill(colorLayers[shapes[i].colorLayer]);
+    // noStroke();
+    stroke('black');
+    strokeWeight(1);
+    noFill();
+    // fill(colorLayers[shapes[i].colorLayer]);
     quad(
       shapes[i].points[0] - shapes[i].offset.x,
       shapes[i].points[1] - shapes[i].offset.y,
@@ -605,57 +597,46 @@ function draw() {
   }
 
   // Draw the outline of the marshmallow that will act as a mask for the sticky chocolate
-  push();
-  noStroke();
-  fill('rgba(0,0,0, 0)');
-  translate(marshmallow.body.position.x, marshmallow.body.position.y);
-  rotate(marshmallow.body.angle);
-  rect(0, 0, marshmallow.w, marshmallow.h, 8);
-  pop();
+  // push();
+  // noStroke();
+  // noFill();
+  // translate(marshmallow.body.position.x, marshmallow.body.position.y);
+  // rotate(marshmallow.body.angle);
+  // // image(marshmallowBodyMask, marshmallow.w/2 * -1, marshmallow.h/2 * -1, marshmallow.w, marshmallow.h);
+  // rect(0, 0, marshmallow.w, marshmallow.h, 8);
+  // pop();
 
   // Impose a screenshot of the chocolate onto the marshmallow
-  push();
-  translate(marshmallow.body.position.x, marshmallow.body.position.y);
-  rotate(marshmallow.body.angle - 1.5708);
-  drawingContext.clip();
-  if(pixelDensity() === 2) {
-    scale(0.5);
-    translate(marshmallow.h * -1, marshmallow.w * -1);
-  } else {
-    translate(marshmallow.h/2 * -1, marshmallow.w/2 * -1);
-  }
-  drawingContext.drawImage(canvas, 0, 0);
-  pop();
-  push();
-  noStroke();
-  fill('rgba(0,0,0, 0.1)');
-  rect(marshmallow.h/2, marshmallow.w/2, marshmallow.h, marshmallow.w);
-  pop();
+  // push();
+  // translate(marshmallow.body.position.x, marshmallow.body.position.y);
+  // rotate(marshmallow.body.angle - 1.5708);
+  // drawingContext.clip();
+  // if(pixelDensity() === 2) {
+  //   scale(0.5);
+  //   translate(marshmallow.h * -1, marshmallow.w * -1);
+  // } else {
+  //   translate(marshmallow.h/2 * -1, marshmallow.w/2 * -1);
+  // }
+  // drawingContext.drawImage(canvas, 0, 0);
+  // pop();
+  // push();
+  // noStroke();
+  // fill('rgba(0,0,0, 0.1)');
+  // rect(marshmallow.h/2, marshmallow.w/2, marshmallow.h, marshmallow.w);
+  // pop();
 
   // Cover the reference image in the top left hand corner that is used to grab the screen shot
-  push();
-  noStroke();
-  fill('#fee096');
-  rect(0 + marshmallow.h/2, 0 + marshmallow.w/2, marshmallow.h, marshmallow.w);
-  pop();
+  // push();
+  // noStroke();
+  // fill('#fee096');
+  // rect(0 + marshmallow.h/2, 0 + marshmallow.w/2, marshmallow.h, marshmallow.w);
+  // pop();
 
   // Cup
   push();
   drawingContext.globalAlpha = 0.5;
   fill('brown');
   rect(cup.body.position.x, cup.body.position.y, cup.w, cup.h);
-  pop();
-
-
-
-  // --------------------
-  // Draw the marshmallow
-  // --------------------
-
-  push();
-  translate(marshmallow.body.position.x, marshmallow.body.position.y);
-  rotate(marshmallow.body.angle);
-  image(marshmallowBody, marshmallow.w/2 * -1, marshmallow.h/2 * -1, marshmallow.w, marshmallow.h);
   pop();
 
 
@@ -692,6 +673,7 @@ function draw() {
     }
   }
 
+  // Rope attachment on top of head
   push();
   noStroke();
   fill('black');
@@ -700,6 +682,7 @@ function draw() {
   ellipse(0, 0, 10, 3);
   pop();
 
+  // Draw arms
   push();
   strokeWeight(2.5);
   ellipse(armLeft.position.x, armLeft.position.y, 10);
