@@ -15,24 +15,11 @@ var Engine = Matter.Engine,
     MouseConstraint = Matter.MouseConstraint,
     Mouse = Matter.Mouse,
     Events = Matter.Events,
-    Render = Matter.Render,
-    Runner = Matter.Runner;
+    Vertices = Matter.Vertices;
 
 var engine = Engine.create();
     engine.constraintIterations = 2.5;
 var world = engine.world;
-
-// create renderer
-var render = Render.create({
-	element: document.body,
-	engine: engine,
-	options: {
-		width: window.innerWidth,
-    height: window.innerHeight,
-		showVelocity: true,
-		showCollisions: true
-   }
- });
 
 var floor;
 var cup;
@@ -47,6 +34,11 @@ var colorLayer = 0;
 var colorLayers = ['#e8d2d2', '#d1a5a5', '#bb7878', '#a44b4b', '#8d1e1e'];
 
 
+
+// -----
+// Clear
+// -----
+
 var btnClear = document.querySelector('.btn-clear');
 
 btnClear.addEventListener('click', function() {
@@ -54,10 +46,17 @@ btnClear.addEventListener('click', function() {
   colorLayer = 0;
 });
 
+
+
+// ------
+// Resize
+// ------
+
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
-
 }
+
+
 
 // ---------------------------
 // Check marshmallow direction
@@ -78,11 +77,13 @@ function checkDirection(object) {
 
 
 
-// ---------------------------------------------------------
-// Figure out whether the marshmallow is being dipped or not
-// ---------------------------------------------------------
+// ----------------
+// Dip interactions
+// ----------------
 
 var dip = false;
+var intersections;
+var shapes = [];
 
 function dipStatus(event, time) {
   if(event.pairs[0].bodyA === marshmallow.body && event.pairs[0].bodyB === cup.body) {
@@ -93,15 +94,6 @@ function dipStatus(event, time) {
     }
   }
 }
-
-
-
-// ------------
-// Draw the dip
-// ------------
-
-var intersections;
-var shapes = [];
 
 function dipFunc(shapeArray) {
   var shapeAngle;
@@ -301,10 +293,37 @@ function setup() {
   // Boundaries
   // ----------
 
-  floor = new Box(width/2, height - 5, 300, 10, {isStatic: true});
-  cup = new Box(width/2, height - 70, 200, 120, {isStatic: true, isSensor: true, label: 'cup'});
-  cupLeft = new Box(width/2 - 114, height - 70, 30, 120, {isStatic: true, label: 'cupLeft'});
-  cupRight = new Box(width/2 + 114, height - 70, 30, 120, {isStatic: true, label: 'cupRight'});
+  floor = new Box(width/2, height - 5, 300, 10, {
+    isStatic: true,
+    collisionFilter: {
+      category: 0x0002
+    }
+  });
+
+  cup = new Box(width/2, height - 70, 200, 120, {
+    isStatic: true,
+    isSensor: true,
+    label: 'cup',
+    collisionFilter: {
+      category: 0x0002
+    }
+  });
+
+  cupLeft = new Box(width/2 - 114, height - 70, 30, 120, {
+    isStatic: true,
+    label: 'cupLeft',
+    collisionFilter: {
+      category: 0x0002
+    }
+  });
+
+  cupRight = new Box(width/2 + 114, height - 70, 30, 120, {
+    isStatic: true,
+    label: 'cupRight',
+    collisionFilter: {
+      category: 0x0002
+    }
+  });
 
   topOfCup = cup.body.position.y - cup.h / 2;
 
@@ -318,37 +337,141 @@ function setup() {
 
   marshmallow = new Box(width/2, 300, 80, 100, {
     density: 0.00001,
-    label: 'marshmallow'
+    label: 'marshmallow',
+    // chamfer: { radius: 8 },
+    collisionFilter: {
+      category: 0x0001,
+      mask: 0x0002
+    }
   });
 
-  var anchor = new Box(width/2, 100, 5, 5, {
-    isStatic: true
+  marshmallowBody = loadImage('img/body.png');
+
+  (function createChain() {
+    var chainLinks = 6;
+    var linkLength = 10;
+    var hinges = [];
+
+    // Create hinges
+    for(var i = 0; i < chainLinks; i++) {
+      var static = (i === 0) ? true : false ;
+
+      var anchor = new Box(width/2, 100 + (linkLength * i), 5, 5, {
+        isStatic: static,
+        collisionFilter: {
+          category: 0x0001
+        }
+      });
+
+      hinges.push(anchor);
+    }
+
+    // Create links between hinges
+    for(var i = 0; i < hinges.length; i++) {
+      var constraint;
+
+      if(i === chainLinks - 1) {
+        constraint = Constraint.create({
+          bodyA: hinges[i].body,
+          bodyB: marshmallow.body,
+          pointB: { x: 0, y: (marshmallow.h/2 * -1) + 12 },
+          length: linkLength,
+          damping: 0.5,
+          stiffness: 0.1,
+          label: 'marshmallowAttachment'
+        });
+      } else {
+        constraint = Constraint.create({
+          bodyA: hinges[i].body,
+          bodyB: hinges[i + 1].body,
+          length: linkLength,
+          damping: 0.5,
+          stiffness: 0.1
+        });
+      }
+
+      World.add(world, constraint);
+    }
+  })();
+
+  armLeft = Bodies.circle(width/2 - 40, 300, 5, {
+    collisionFilter: {
+      category: 0x0001
+    },
+    density: 0.00001
   });
 
-  var anchor1 = new Box(width/2, 100, 5, 5, {
-
+  armRight = Bodies.circle(width/2 + 40, 300, 5, {
+    collisionFilter: {
+      category: 0x0001
+    },
+    density: 0.00001
   });
 
-  constraint1 = Constraint.create({
-    bodyA: anchor.body,
-    bodyB: anchor1.body,
-    length: 100,
+  var legRight = Bodies.circle(width/2 + 20, 300 + 50, 0.1, {
+    collisionFilter: {
+      category: 0x0001
+    },
+    density: 0.00001
+  });
+
+  var legLeft = Bodies.circle(width/2 - 20, 300 + 50, 0.1, {
+    collisionFilter: {
+      category: 0x0001
+    },
+    density: 0.00001
+  });
+
+  constraintArmLeft = Constraint.create({
+    bodyA: marshmallow.body,
+    bodyB: armLeft,
+    pointA: { x: -38.25, y: -20 },
+    length: 40,
     damping: 0.5,
-    stiffness: 0.1
+    stiffness: 1,
+    label: 'limb'
   });
 
-  constraint2 = Constraint.create({
-    bodyA: anchor1.body,
-    bodyB: marshmallow.body,
-    length: 100,
-    pointB: { x: 0, y: -50 },
+  constraintArmRight = Constraint.create({
+    bodyA: marshmallow.body,
+    bodyB: armRight,
+    pointA: { x: 38.25, y: -20 },
+    length: 40,
     damping: 0.5,
-    stiffness: 0.1
+    stiffness: 1,
+    label: 'limb'
   });
 
-  console.log(constraint2);
+  constraintLegRight = Constraint.create({
+    bodyA: marshmallow.body,
+    bodyB: legRight,
+    pointA: { x: 20, y: 49 },
+    length: 30,
+    damping: 0.5,
+    stiffness: 1,
+    label: 'limb'
+  });
 
-  World.add(world, [constraint1, constraint2]);
+  constraintLegLeft = Constraint.create({
+    bodyA: marshmallow.body,
+    bodyB: legLeft,
+    pointA: { x: -20, y: 49 },
+    length: 30,
+    damping: 0.5,
+    stiffness: 1,
+    label: 'limb'
+  });
+
+  World.add(world, [
+    armLeft,
+    armRight,
+    legRight,
+    legLeft,
+    constraintArmLeft,
+    constraintArmRight,
+    constraintLegRight,
+    constraintLegLeft
+  ]);
 
 
 
@@ -366,13 +489,15 @@ function setup() {
     }
   });
 
+  mouseConstraint.collisionFilter.category = 0x0002;
+
   World.add(world, mouseConstraint);
 
 
 
-  // -------------
-  // Cup collision
-  // -------------
+  // ---------
+  // Collision
+  // ---------
 
   var interval;
 
@@ -422,7 +547,12 @@ function setup() {
 function draw() {
   clear();
 
-  // Draw lines around all of the bodies in the engine
+
+
+  // ----------------------
+  // Outline matter objects
+  // ----------------------
+
   push();
   var bodies = Composite.allBodies(engine.world);
 
@@ -441,12 +571,19 @@ function draw() {
   drawingContext.stroke();
   pop();
 
+
+
+  // ---------------
+  // Marshmallow dip
+  // ---------------
+
   push();
   noStroke();
   fill('rgba(0,0,0, 0)');
   rect(0 + marshmallow.h/2, 0 + marshmallow.w/2, marshmallow.h, marshmallow.w);
   pop();
 
+  // Draw all of the dipped shapes
   for(var i = 0; i < shapes.length; i++) {
     push();
     translate(marshmallow.h/2, 0);
@@ -473,7 +610,7 @@ function draw() {
   fill('rgba(0,0,0, 0)');
   translate(marshmallow.body.position.x, marshmallow.body.position.y);
   rotate(marshmallow.body.angle);
-  rect(0, 0, marshmallow.w, marshmallow.h);
+  rect(0, 0, marshmallow.w, marshmallow.h, 8);
   pop();
 
   // Impose a screenshot of the chocolate onto the marshmallow
@@ -498,11 +635,11 @@ function draw() {
   // Cover the reference image in the top left hand corner that is used to grab the screen shot
   push();
   noStroke();
-  fill('rgba(255,255,255, 1)');
+  fill('#fee096');
   rect(0 + marshmallow.h/2, 0 + marshmallow.w/2, marshmallow.h, marshmallow.w);
   pop();
 
-  //
+  // Cup
   push();
   drawingContext.globalAlpha = 0.5;
   fill('brown');
@@ -510,13 +647,62 @@ function draw() {
   pop();
 
 
-  // Draw the chain
-  line(constraint1.bodyA.position.x, constraint1.bodyA.position.y, constraint1.bodyB.position.x, constraint1.bodyB.position.y);
+
+  // --------------------
+  // Draw the marshmallow
+  // --------------------
+
   push();
-  translate();
-  line(constraint2.bodyA.position.x, constraint2.bodyA.position.y, marshmallow.body.position.x, marshmallow.body.position.y - 50);
+  translate(marshmallow.body.position.x, marshmallow.body.position.y);
+  rotate(marshmallow.body.angle);
+  image(marshmallowBody, marshmallow.w/2 * -1, marshmallow.h/2 * -1, marshmallow.w, marshmallow.h);
+  pop();
+
+
+
+  // --------------
+  // Draw the chain
+  // --------------
+
+  var allConstraints = Composite.allConstraints(engine.world);
+  var marshmallowAttachment;
+
+  push();
+  noStroke();
+  fill('black');
+  ellipse(allConstraints[0].bodyA.position.x, allConstraints[0].bodyA.position.y, 25, 6);
+  pop();
+
+  for(var i = 0; i < allConstraints.length; i++) {
+    if(allConstraints[i].label === 'marshmallowAttachment') {
+      marshmallowAttachment = allConstraints[i];
+    }
+
+    if(allConstraints[i].label !== 'Mouse Constraint') {
+      push();
+      strokeWeight(2.5);
+
+      line(
+        allConstraints[i].bodyA.position.x + allConstraints[i].pointA.x,
+        allConstraints[i].bodyA.position.y + allConstraints[i].pointA.y,
+        allConstraints[i].bodyB.position.x + allConstraints[i].pointB.x,
+        allConstraints[i].bodyB.position.y + allConstraints[i].pointB.y
+      );
+      pop();
+    }
+  }
+
+  push();
+  noStroke();
+  fill('black');
+  translate(marshmallowAttachment.bodyB.position.x + marshmallowAttachment.pointB.x, marshmallowAttachment.bodyB.position.y + marshmallowAttachment.pointB.y);
+  rotate(marshmallow.body.angle);
+  ellipse(0, 0, 10, 3);
+  pop();
+
+  push();
+  strokeWeight(2.5);
+  ellipse(armLeft.position.x, armLeft.position.y, 10);
+  ellipse(armRight.position.x, armRight.position.y, 10);
   pop();
 }
-
-// run the renderer
-Render.run(render);

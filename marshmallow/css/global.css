@@ -10,7 +10,7 @@ html {
 }
 
 body {
-
+  background: #fee096;
 }
 
 canvas {
@@ -31,4 +31,5 @@ canvas {
   color: grey;
   cursor: pointer;
   outline: none;
+  display: none;
 }
