@@ -14,11 +14,25 @@ var Engine = Matter.Engine,
     Composites = Matter.Composites,
     MouseConstraint = Matter.MouseConstraint,
     Mouse = Matter.Mouse,
-    Events = Matter.Events;
+    Events = Matter.Events,
+    Render = Matter.Render,
+    Runner = Matter.Runner;
 
 var engine = Engine.create();
     engine.constraintIterations = 2.5;
 var world = engine.world;
+
+// create renderer
+var render = Render.create({
+	element: document.body,
+	engine: engine,
+	options: {
+		width: window.innerWidth,
+    height: window.innerHeight,
+		showVelocity: true,
+		showCollisions: true
+   }
+ });
 
 var floor;
 var cup;
@@ -274,6 +288,9 @@ function marshmallowIntersection() {
 // Setup
 // -----
 
+var constraint1;
+var constraint2;
+
 function setup() {
   var canvas = createCanvas(windowWidth, windowHeight);
   rectMode(CENTER);
@@ -299,27 +316,41 @@ function setup() {
   // Marshmallow chain
   // -----------------
 
-  var group = Body.nextGroup(true);
-
-  // Create the chain link bodies
-  chain = Composites.stack(width/2, 50, 5, 1, 10, 10, function(x, y) {
-    return Bodies.rectangle(x, y, 25, 5, { collisionFilter: { group: group } });
+  marshmallow = new Box(width/2, 300, 80, 100, {
+    density: 0.00001,
+    label: 'marshmallow'
   });
 
-  // Add the marshmallow to the end of the chain
-  marshmallow = new Box(width/2, 400, 100, 80, {density: 0.0001, collisionFilter: { group: group }, label: 'marshmallow'});
-  Composite.add(chain, marshmallow.body);
+  var anchor = new Box(width/2, 100, 5, 5, {
+    isStatic: true
+  });
 
-  Composites.chain(chain, 0.5, 0, -0.5, 0, { stiffness: 0.1, length: 5, render: { type: 'line' } });
+  var anchor1 = new Box(width/2, 100, 5, 5, {
 
-  Composite.add(chain, Constraint.create({
-    bodyB: chain.bodies[0],
-    pointB: { x: -12, y: 0 },
-    pointA: { x: chain.bodies[0].position.x, y: chain.bodies[0].position.y },
-    stiffness: 0.8
-  }));
+  });
 
-  World.add(world, chain);
+  constraint1 = Constraint.create({
+    bodyA: anchor.body,
+    bodyB: anchor1.body,
+    length: 100,
+    damping: 0.5,
+    stiffness: 0.1
+  });
+
+  constraint2 = Constraint.create({
+    bodyA: anchor1.body,
+    bodyB: marshmallow.body,
+    length: 100,
+    pointB: { x: 0, y: -50 },
+    damping: 0.5,
+    stiffness: 0.1
+  });
+
+  console.log(constraint2);
+
+  World.add(world, [constraint1, constraint2]);
+
+
 
   // ------------
   // Mouse events
@@ -392,6 +423,7 @@ function draw() {
   clear();
 
   // Draw lines around all of the bodies in the engine
+  push();
   var bodies = Composite.allBodies(engine.world);
 
   drawingContext.beginPath();
@@ -407,6 +439,7 @@ function draw() {
   drawingContext.lineWidth = 1;
   drawingContext.strokeStyle = '#9e9e9e';
   drawingContext.stroke();
+  pop();
 
   push();
   noStroke();
@@ -478,18 +511,12 @@ function draw() {
 
 
   // Draw the chain
+  line(constraint1.bodyA.position.x, constraint1.bodyA.position.y, constraint1.bodyB.position.x, constraint1.bodyB.position.y);
   push();
-  stroke('black');
-  strokeWeight(2.5);
-  for (var i = 0; i < chain.bodies.length; i++) {
-    if(i < chain.bodies.length - 1) {
-      line(
-        chain.bodies[i].position.x,
-        chain.bodies[i].position.y,
-        chain.bodies[i + 1].position.x,
-        chain.bodies[i + 1].position.y
-      );
-    }
-  }
+  translate();
+  line(constraint2.bodyA.position.x, constraint2.bodyA.position.y, marshmallow.body.position.x, marshmallow.body.position.y - 50);
   pop();
 }
+
+// run the renderer
+Render.run(render);
