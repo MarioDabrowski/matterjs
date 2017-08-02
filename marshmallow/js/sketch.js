@@ -33,6 +33,31 @@ var chainArray = [];
 var colorLayer = 0;
 var colorLayers = ['#e8d2d2', '#d1a5a5', '#bb7878', '#a44b4b', '#8d1e1e'];
 
+var distanceFromCup = {
+  size: 500,
+  towards: true
+};
+
+var firstAnimation = {
+  max: 241,
+  min: 171,
+  percent: 1
+};
+
+var secondAnimation = {
+  max: 170,
+  min: 100,
+  percent: 0
+};
+
+var thirdAnimation = {
+  max: 241,
+  min: 100,
+  percent: 0
+};
+
+var distanceToCup = 10000;
+
 
 
 // -----
@@ -308,7 +333,7 @@ function setup() {
 
   Events.on(engine, 'collisionActive', function(event) {
     for(var i = 0; i < event.pairs.length; i++) {
-      
+
     }
   });
 
@@ -410,6 +435,81 @@ function draw() {
   ellipse(armRight.position.x, armRight.position.y, 10);
   pop();
 
+  if(marshmallow.body.position.y / height > 0.75) {
+    Matter.Body.setVelocity(armLeft, { x: 0, y: -3 })
+    Matter.Body.setVelocity(armRight, { x: 0, y: -3 })
+  }
+
+
+
+  // -----------------------------
+  // Facial expression experiments
+  // -----------------------------
+
+  distanceToCup = Math.sqrt(Math.pow(marshmallow.body.position.x - cup.body.position.x, 2) + Math.pow(marshmallow.body.position.y - cup.body.position.y, 2));
+
+  if(distanceToCup <= firstAnimation.max && distanceToCup >= firstAnimation.min) {
+    firstAnimation.percent = (distanceToCup - firstAnimation.min) / (firstAnimation.max - firstAnimation.min);
+  }
+
+  if(distanceToCup < secondAnimation.max && distanceToCup >= secondAnimation.min) {
+    secondAnimation.percent = ((distanceToCup - secondAnimation.min) / (secondAnimation.max - secondAnimation.min) - 1) * -1;
+  }
+
+  if(distanceToCup < thirdAnimation.max && distanceToCup >= thirdAnimation.min) {
+    thirdAnimation.percent = ((distanceToCup - thirdAnimation.min) / (thirdAnimation.max - thirdAnimation.min) - 1) * -1;
+  }
+
+  if(distanceToCup < secondAnimation.max) {
+    firstAnimation.percent = 0;
+  }
+
+  if(distanceToCup > firstAnimation.max) {
+    firstAnimation.percent = 1;
+    secondAnimation.percent = 0;
+  }
+
+  // Marshmallow eye left
+  push();
+  translate(marshmallow.body.position.x, marshmallow.body.position.y);
+  strokeWeight(3);
+  noFill();
+  rotate(marshmallow.body.angle);
+  bezier(
+    -20, -5 + (secondAnimation.percent * 5)  + (secondAnimation.percent * -4),
+    -20, -5 + (firstAnimation.percent * -7) + (secondAnimation.percent * 5) + (secondAnimation.percent * -4),
+    -10, -5 + (firstAnimation.percent * -7) + (secondAnimation.percent * -4),
+    -10, -5 + (secondAnimation.percent * -4)
+  );
+  pop();
+
+  // Marshmallow eye right
+  // The second parameter (secondAnimation.percent * -4) is to move the item up when the animation happens
+  push();
+  translate(marshmallow.body.position.x, marshmallow.body.position.y);
+  strokeWeight(3);
+  noFill();
+  rotate(marshmallow.body.angle);
+  bezier(
+    20, -5 + (secondAnimation.percent * 5) + (secondAnimation.percent * -4),
+    20, -5 + (firstAnimation.percent * -7) + (secondAnimation.percent * 5) + (secondAnimation.percent * -4),
+    10, -5 + (firstAnimation.percent * -7) + (secondAnimation.percent * -4),
+    10, -5 + (secondAnimation.percent * -4)
+  );
+  pop();
+
+  // Marshmallow mouth
+  push();
+  stroke('#000');
+  strokeJoin(ROUND);
+  strokeWeight(2);
+  fill('black');
+  translate(marshmallow.body.position.x, marshmallow.body.position.y);
+  rotate(marshmallow.body.angle);
+  arc(0, 12 + (thirdAnimation.percent * 5), 16, firstAnimation.percent * 14, 0, 3.14, CHORD);
+  arc(0, 12 + (thirdAnimation.percent * 5), 16, thirdAnimation.percent * 14, 3.14, 0, CHORD);
+  pop();
+
 
 
   // ---
@@ -446,19 +546,19 @@ function draw() {
   fill('white');
   translate(cup.body.position.x - 76.5, cup.body.position.y - 5.5);
   ellipse(0, 0, 34);
-
+  rotate(thirdAnimation.percent * 1.3);
   stroke('#812d29');
   strokeWeight(3.5);
   line(-24, 2, 2, -24);
   pop();
 
-  // Outer eye Left
+  // Outer eye right
   push();
   noStroke();
   fill('white');
   translate(cup.body.position.x + 76.5, cup.body.position.y - 5.5);
   ellipse(0, 0, 34);
-
+  rotate(thirdAnimation.percent * -1.3);
   stroke('#812d29');
   strokeWeight(3.5);
   line(24, -2, -2, -24);
@@ -469,7 +569,7 @@ function draw() {
   noStroke();
   fill('#f6554f');
   translate(cup.body.position.x + 76.5, cup.body.position.y);
-  ellipse(0, 10, 34, 10);
+  ellipse(0, 10 + thirdAnimation.percent * 3, 34, 10);
   pop();
 
   // Cheek left
@@ -477,7 +577,7 @@ function draw() {
   noStroke();
   fill('#ff635b');
   translate(cup.body.position.x - 76.5, cup.body.position.y);
-  ellipse(0, 10, 34, 10);
+  ellipse(0, 10 + thirdAnimation.percent * 3, 34, 10);
   pop();
 
   // Blush left
@@ -501,7 +601,27 @@ function draw() {
   noStroke();
   fill('black');
   translate(cup.body.position.x, cup.body.position.y);
-  ellipse(-76.5, -7, 9.5);
-  ellipse(76.5, -7, 9.5);
+  ellipse(
+    -76.5 + (marshmallow.body.position.x / width - 0.5) * 10,
+    -7 + (marshmallow.body.position.y / height - 0.5) * 10,
+    9.5
+  );
+  ellipse(
+    76.5 + (marshmallow.body.position.x / width - 0.5) * 10,
+    -7 + (marshmallow.body.position.y / height - 0.5) * 10,
+    9.5
+  );
+  pop();
+
+  // Cup mouth
+  push();
+  stroke('#812d29');
+  strokeJoin(ROUND);
+  strokeWeight(2);
+  fill('#812d29');
+  translate(cup.body.position.x, cup.body.position.y);
+  rotate(cup.body.angle);
+  arc(0, -10 + (thirdAnimation.percent * 18), 46, firstAnimation.percent * 44, 0, 3.14, CHORD);
+  arc(0, -10 + (thirdAnimation.percent * 18), 46, thirdAnimation.percent * 44, 3.14, 0, CHORD);
   pop();
 }
